@@ -1,0 +1,414 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arslan Digital - Video Creator</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background: #0b1020;
+  color: white;
+  padding: 20px;
+}
+
+.header {
+  text-align: center;
+  padding: 20px 10px;
+}
+
+.header h1 {
+  color: #38bdf8;
+  font-size: 28px;
+}
+
+.header p {
+  color: #aab5c8;
+  margin-top: 8px;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+}
+
+.panel {
+  background: #151e32;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+}
+
+h2 {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #38bdf8;
+}
+
+label {
+  display: block;
+  margin: 13px 0 7px;
+  color: #dbeafe;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #34445f;
+  border-radius: 8px;
+  background: #0b1426;
+  color: white;
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+button {
+  border: none;
+  padding: 13px 17px;
+  border-radius: 8px;
+  background: #0284c7;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+button:hover {
+  background: #0369a1;
+}
+
+.preview {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+canvas {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 9 / 16;
+  background: #111827;
+  border-radius: 12px;
+  border: 2px solid #334155;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.actions button {
+  flex: 1;
+  min-width: 120px;
+}
+
+#status {
+  color: #4ade80;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.footer {
+  text-align: center;
+  padding: 20px;
+  color: #94a3b8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header class="header">
+  <h1>ARSLAN DIGITAL</h1>
+  <p>Professional Video Creator</p>
+</header>
+
+<div class="panel">
+  <h2>1. Select Your Image</h2>
+
+  <label>Upload Post / Image</label>
+  <input type="file" id="imageInput" accept="image/*">
+
+  <label>Background Color</label>
+  <input type="color" id="bgColor" value="#102a43">
+</div>
+
+<div class="panel">
+  <h2>2. Create Your Caption</h2>
+
+  <label>Video Heading</label>
+  <input type="text" id="heading"
+  value="WELCOME TO ARSLAN DIGITAL">
+
+  <label>Caption / Description</label>
+  <textarea id="caption">We create professional websites and mobile applications. Contact us today!</textarea>
+
+  <label>Text Color</label>
+  <input type="color" id="textColor" value="#ffffff">
+
+  <label>Font Size</label>
+  <input type="range" id="fontSize" min="18" max="55" value="30">
+</div>
+
+<div class="panel">
+  <h2>3. Video Settings</h2>
+
+  <label>Video Duration</label>
+  <select id="duration">
+    <option value="10">10 Seconds</option>
+    <option value="15">15 Seconds</option>
+    <option value="20">20 Seconds</option>
+    <option value="30">30 Seconds</option>
+  </select>
+
+  <label>Animation</label>
+  <select id="animation">
+    <option value="fade">Fade In</option>
+    <option value="zoom">Zoom In</option>
+    <option value="slide">Slide Up</option>
+  </select>
+</div>
+
+<div class="panel">
+  <h2>4. Video Preview</h2>
+
+  <div class="preview">
+    <canvas id="canvas" width="720" height="1280"></canvas>
+  </div>
+
+  <div class="actions">
+    <button onclick="drawPreview()">Preview</button>
+    <button onclick="startVideo()">Create Video</button>
+    <button onclick="stopVideo()">Stop Recording</button>
+  </div>
+
+  <p id="status">Ready to create your video.</p>
+</div>
+
+<div class="footer">
+  © 2026 Arslan Digital | All Rights Reserved
+</div>
+
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let uploadedImage = null;
+let recorder = null;
+let chunks = [];
+let recordingTimer = null;
+let recording = false;
+let startTime = 0;
+
+const imageInput = document.getElementById("imageInput");
+
+imageInput.addEventListener("change", function(e) {
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  const img = new Image();
+
+  img.onload = function() {
+    uploadedImage = img;
+    drawPreview();
+  };
+
+  img.src = URL.createObjectURL(file);
+});
+
+function drawPreview(progress = 1) {
+  const heading = document.getElementById("heading").value;
+  const caption = document.getElementById("caption").value;
+  const bg = document.getElementById("bgColor").value;
+  const color = document.getElementById("textColor").value;
+  const fontSize = Number(document.getElementById("fontSize").value);
+  const animation = document.getElementById("animation").value;
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 720, 1280);
+
+  let imageY = 230;
+  let imageScale = 1;
+
+  if (animation === "zoom") {
+    imageScale = 0.8 + progress * 0.2;
+  }
+
+  if (animation === "slide") {
+    imageY = 230 + (1 - progress) * 150;
+  }
+
+  ctx.globalAlpha = animation === "fade" ? progress : 1;
+
+  if (uploadedImage) {
+    const maxW = 620;
+    const maxH = 600;
+
+    const scale = Math.min(
+      maxW / uploadedImage.width,
+      maxH / uploadedImage.height
+    ) * imageScale;
+
+    const w = uploadedImage.width * scale;
+    const h = uploadedImage.height * scale;
+
+    ctx.drawImage(
+      uploadedImage,
+      (720 - w) / 2,
+      imageY,
+      w,
+      h
+    );
+  } else {
+    ctx.fillStyle = "#24364f";
+    ctx.fillRect(50, 250, 620, 450);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "32px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("YOUR IMAGE HERE", 360, 480);
+  }
+
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.font = "bold " + fontSize + "px Arial";
+  wrapText(heading, 360, 850, 620, fontSize + 15);
+
+  ctx.font = "30px Arial";
+  wrapText(caption, 360, 1010, 600, 42);
+
+  ctx.font = "bold 28px Arial";
+  ctx.fillStyle = "#38bdf8";
+  ctx.fillText("ARSLAN DIGITAL", 360, 1200);
+}
+
+function wrapText(text, x, y, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
+  let currentY = y;
+
+  words.forEach(word => {
+    const test = line + word + " ";
+
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, currentY);
+      line = word + " ";
+      currentY += lineHeight;
+    } else {
+      line = test;
+    }
+  });
+
+  if (line) ctx.fillText(line, x, currentY);
+}
+
+function startVideo() {
+  if (recording) return;
+
+  if (!canvas.captureStream || !window.MediaRecorder) {
+    document.getElementById("status").textContent =
+      "Your browser does not support video recording.";
+    return;
+  }
+
+  chunks = [];
+
+  const duration = Number(
+    document.getElementById("duration").value
+  );
+
+  const stream = canvas.captureStream(30);
+
+  const mimeType = MediaRecorder.isTypeSupported(
+    "video/webm;codecs=vp9"
+  ) ? "video/webm;codecs=vp9" : "video/webm";
+
+  recorder = new MediaRecorder(stream, {
+    mimeType: mimeType
+  });
+
+  recorder.ondataavailable = function(e) {
+    if (e.data.size > 0) chunks.push(e.data);
+  };
+
+  recorder.onstop = function() {
+    const blob = new Blob(chunks, { type: "video/webm" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Arslan-Digital-Video.webm";
+    a.click();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    stream.getTracks().forEach(track => track.stop());
+
+    document.getElementById("status").textContent =
+      "Video successfully created! Check your downloads.";
+  };
+
+  recording = true;
+  startTime = Date.now();
+
+  recorder.start();
+
+  document.getElementById("status").textContent =
+    "Recording video...";
+
+  function animate() {
+    if (!recording) return;
+
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / 1500, 1);
+
+    drawPreview(progress);
+
+    if (elapsed >= duration * 1000) {
+      stopVideo();
+      return;
+    }
+
+    recordingTimer = requestAnimationFrame(animate);
+  }
+
+  animate();
+}
+
+function stopVideo() {
+  if (!recording) return;
+
+  recording = false;
+
+  cancelAnimationFrame(recordingTimer);
+
+  if (recorder && recorder.state !== "inactive") {
+    recorder.stop();
+  }
+}
+
+drawPreview();
+</script>
+
+</body>
+</html>
